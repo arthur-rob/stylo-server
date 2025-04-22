@@ -10,7 +10,7 @@ app.use(cors())
 app.use(bodyParser.json())
 
 mongoose
-    .connect(process.env.MONGO_URI as string)
+    .connect(process.env.MONGO_URI!)
     .then(() => console.log('MongoDB connected'))
     .catch((err) => console.log(err))
 
