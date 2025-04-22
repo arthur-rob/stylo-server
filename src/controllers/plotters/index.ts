@@ -18,18 +18,18 @@ export const draw = async (req: Request, res: Response) => {
 export const list = async (req: Request, res: Response) => {
     try {
         const users = await Plotter.find()
-        res.json(users);
+        res.json(users)
     } catch (error) {
-        res.status(500).json({ message: "Erreur serveur" });
+        res.status(500).json({ message: 'Erreur serveur' })
     }
 }
 
-export const discover = async (req: Request, res: Response) => {  
+export const discover = async (req: Request, res: Response) => {
     try {
         const users = await plotterService.discover()
-        res.json(users);
+        res.json(users)
     } catch (error) {
-        res.status(500).json({ message: "Erreur serveur" });
+        res.status(500).json({ message: 'Erreur serveur' })
     }
 }
 
@@ -38,6 +38,6 @@ export const reset = async (req: Request, res: Response) => {
         await plotterService.reset()
         res.json({ status: 'reset' })
     } catch (error) {
-        res.status(500).json({ message: "Erreur serveur" });
+        res.status(500).json({ message: 'Erreur serveur' })
     }
 }
