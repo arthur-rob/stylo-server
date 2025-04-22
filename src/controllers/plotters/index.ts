@@ -1,72 +1,43 @@
-import { SerialPort } from 'serialport'
-import { ReadlineParser } from '@serialport/parser-readline'
 import { Request, Response } from 'express'
+import * as plotterService from '@/services/plotterService'
+import Plotter from '@/models/plotterModel'
 
-const machine = new SerialPort({ path: '/dev/tty.usbserial-1120', baudRate: 115200 }, function (err: any) {
-    if (err) return console.log('Error: ', err.message)
-})
-const parser = machine.pipe(new ReadlineParser({ delimiter: '\r\n' }))
-let isDrawing = false
-let commands: string[] = []
-let currentCommandIndex = 0
-
-parser.on('data', (data: string) => {
-    if (data != "ok") {
-        console.log(data)
-        console.log(commands[currentCommandIndex])
-    }
-    console.log(`${currentCommandIndex} / ${commands.length}`)
-    if (currentCommandIndex <= commands.length) { 
-        sendNextCommand()
-    }
-})
-
-machine.on('error', (err: any) => {
-    console.log('Error: ', err.message)
-    machine.close()
-})
-
-
-const sendNextCommand = () => {
-    if (currentCommandIndex < commands.length) {
-        machine.write(`${commands[currentCommandIndex]}\n`)
-    } else {
-        currentCommandIndex = 0
-        commands = []
-        isDrawing = false
-        return
-    }
-    currentCommandIndex++
-}
-
-const sendGcodeToPlotter = (gcode: string[]) => {
-    commands = gcode
-    sendNextCommand()
-}
-
-
-export const draw = (req: Request, res: Response) => {
-    const params = req.body as { data?: string[] }
-    if (params?.data && !isDrawing) {
-        const gcode = params.data
-        sendGcodeToPlotter(gcode)
-        isDrawing = true
-        res.status(200).json({ status: 'starting' })
-    } else {
-        res.status(400).json({ status: 'error' })
+export const draw = async (req: Request, res: Response) => {
+    const params = req.body
+    try {
+        const gcode = params.data?.gcode
+        const plotterId = params.data?.plotterId
+        if (!gcode) throw new Error('No Gcode provided')
+        await plotterService.draw(gcode, plotterId)
+        res.status(200).json({ status: 'drawing' })
+    } catch (error) {
+        res.status(400).json({ status: error })
     }
 }
 
 export const list = async (req: Request, res: Response) => {
-    machine.write('$\n')
-    const plotterList = await SerialPort.list()
-    res.json(plotterList.map(p => p.path))
+    try {
+        const users = await Plotter.find()
+        res.json(users);
+    } catch (error) {
+        res.status(500).json({ message: "Erreur serveur" });
+    }
 }
 
-export const reset = (req: Request, res: Response) => {
-    if (machine) {
-        isDrawing = false
-        currentCommandIndex = 0
+export const discover = async (req: Request, res: Response) => {  
+    try {
+        const users = await plotterService.discover()
+        res.json(users);
+    } catch (error) {
+        res.status(500).json({ message: "Erreur serveur" });
     }
-    res.json({ status: 'reset' })
+}
+
+export const reset = async (req: Request, res: Response) => {
+    try {
+        await plotterService.reset()
+        res.json({ status: 'reset' })
+    } catch (error) {
+        res.status(500).json({ message: "Erreur serveur" });
+    }
 }
