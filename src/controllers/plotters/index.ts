@@ -31,12 +31,3 @@ export const discover = async (req: Request, res: Response) => {
         res.status(500).json({ message: 'Erreur serveur' })
     }
 }
-
-export const reset = async (req: Request, res: Response) => {
-    try {
-        await plotterService.reset()
-        res.json({ status: 'reset' })
-    } catch (error) {
-        res.status(500).json({ message: 'Erreur serveur' })
-    }
-}

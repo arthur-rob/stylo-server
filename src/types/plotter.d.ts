@@ -8,4 +8,4 @@ export interface Plotter {
     updatedAt?: Date
 }
 
-export type PlotterStatus = 'active' | 'busy' | 'offline' | 'error'
+export type PlotterStatus = 'idle' | 'busy' | 'offline' | 'error'
