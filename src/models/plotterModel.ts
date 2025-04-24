@@ -2,7 +2,7 @@ import mongoose, { Schema, Document } from 'mongoose'
 import { Plotter, PlotterStatus } from '@/types/plotter'
 
 const PlotterStatusEnum: PlotterStatus[] = [
-    'active',
+    'idle',
     'busy',
     'offline',
     'error',

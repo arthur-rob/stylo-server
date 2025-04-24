@@ -21,11 +21,14 @@ const getPlotterById = async (plotterId: string) => {
     return plotter
 }
 
-const updatePlotterStatus = async (plotterId: string, status: PlotterStatus) => {
+const updatePlotterStatus = async (
+    plotterId: string,
+    status: PlotterStatus
+) => {
     const plotter = await getPlotterById(plotterId)
     plotter.status = status
     await plotter.save()
-    return plotter  
+    return plotter
 }
 
 const initializeSerialPort = (plotter: any) => {
