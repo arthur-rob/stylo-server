@@ -1,12 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose'
 import { Plotter, PlotterStatus } from '@/types/plotter'
 
-const PlotterStatusEnum: PlotterStatus[] = [
-    'idle',
-    'busy',
-    'offline',
-    'error',
-]
+const PlotterStatusEnum: PlotterStatus[] = ['idle', 'busy', 'offline', 'error']
 
 const PlotterSchema: Schema = new Schema<Plotter>({
     name: { type: String, required: true },

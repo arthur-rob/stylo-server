@@ -44,7 +44,7 @@ const setupParser = (serialPort: SerialPort) => {
     return serialPort.pipe(new ReadlineParser({ delimiter: '\r\n' }))
 }
 
-const executeGCodeCommands = async (
+export const executeGCodeCommands = async (
     gcode: string[],
     serialPort: SerialPort,
     parser: ReadlineParser
