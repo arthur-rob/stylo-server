@@ -5,18 +5,14 @@ import { PLOTTER_STATUS } from '@/constants/plotter'
 import { PlotterStatus } from '@/types/plotter'
 
 export const draw = async (gcode: string[], plotterName: string) => {
-    try {
-        const plotter = await getPlotterByName(plotterName)
-        const serialPort = initializeSerialPort(plotter)
-        const parser = setupParser(serialPort)
+    const plotter = await getPlotterByName(plotterName)
+    const serialPort = initializeSerialPort(plotter)
+    const parser = setupParser(serialPort)
 
-        await updatePlotterStatus(plotterName, PLOTTER_STATUS.BUSY)
-        await executeGCodeCommands(gcode, serialPort, parser)
+    await updatePlotterStatus(plotterName, PLOTTER_STATUS.BUSY)
+    await executeGCodeCommands(gcode, serialPort, parser)
 
-        return plotter
-    } catch (error) {
-        console.log('error:', error)
-    }
+    return plotter
 }
 
 const getPlotterByName = async (plotterName: string) => {
@@ -65,7 +61,7 @@ export const executeGCodeCommands = async (
         if (currentCommandIndex < commands.length) {
             serialPort.write(`${commands[currentCommandIndex]}\n`)
             currentCommandIndex++
-        } 
+        }
     })
 
     serialPort.on('error', (err: any) => {
