@@ -5,12 +5,13 @@ import Plotter from '@/models/plotterModel'
 export const draw = async (req: Request, res: Response) => {
     const params = req.body
     try {
-        const gcode = params.data?.gcode
-        const plotterId = params.data?.plotterId
-        if (!gcode) throw new Error('No Gcode provided')
+        const gcode = params.gCode
+        const plotterId = params.plotterId
+        if (!gcode || gcode.length == 0) throw new Error('No Gcode provided')
         await plotterService.draw(gcode, plotterId)
         res.status(200).json({ status: 'drawing' })
     } catch (error) {
+        console.error(error)
         res.status(400).json({ status: error })
     }
 }
