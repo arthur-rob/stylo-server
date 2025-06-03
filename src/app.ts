@@ -7,7 +7,7 @@ import mongoose from 'mongoose'
 const app: Application = express()
 
 app.use(cors())
-app.use(bodyParser.json())
+app.use(bodyParser.json({ limit: '50mb' }))
 
 mongoose
     .connect(process.env.MONGO_URI!)

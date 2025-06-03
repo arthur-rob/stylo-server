@@ -22,7 +22,7 @@ describe('plotterService', () => {
                 save: jest.fn(),
             }
 
-            ;(Plotter.findById as jest.Mock).mockResolvedValue(mockPlotter)
+            ;(Plotter.findOne as jest.Mock).mockResolvedValue(mockPlotter)
             jest.spyOn(
                 plotterService,
                 'executeGCodeCommands'
@@ -31,7 +31,7 @@ describe('plotterService', () => {
             const gcode = ['G0 X10 Y10', 'G1 X20 Y20']
             await plotterService.draw(gcode, '123')
 
-            expect(Plotter.findById).toHaveBeenCalledWith('123')
+            expect(Plotter.findOne).toHaveBeenCalledWith({ name: '123' })
             expect(mockPlotter.save).toHaveBeenCalledTimes(1)
             expect(mockPlotter.status).toBe(PLOTTER_STATUS.BUSY)
             expect(plotterService.executeGCodeCommands).toHaveBeenCalledWith(
@@ -42,7 +42,7 @@ describe('plotterService', () => {
         })
 
         it('should throw an error if plotter is not found', async () => {
-            ;(Plotter.findById as jest.Mock).mockResolvedValue(null)
+            ;(Plotter.findOne as jest.Mock).mockResolvedValue(null)
 
             await expect(plotterService.draw([], '123')).rejects.toThrow(
                 'Plotter not found'

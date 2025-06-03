@@ -4,28 +4,28 @@ import Plotter from '@/models/plotterModel'
 import { PLOTTER_STATUS } from '@/constants/plotter'
 import { PlotterStatus } from '@/types/plotter'
 
-export const draw = async (gcode: string[], plotterId: string) => {
-    const plotter = await getPlotterById(plotterId)
+export const draw = async (gcode: string[], plotterName: string) => {
+    const plotter = await getPlotterByName(plotterName)
     const serialPort = initializeSerialPort(plotter)
     const parser = setupParser(serialPort)
 
-    await updatePlotterStatus(plotterId, PLOTTER_STATUS.BUSY)
+    await updatePlotterStatus(plotterName, PLOTTER_STATUS.BUSY)
     await executeGCodeCommands(gcode, serialPort, parser)
 
     return plotter
 }
 
-const getPlotterById = async (plotterId: string) => {
-    const plotter = await Plotter.findById(plotterId)
+const getPlotterByName = async (plotterName: string) => {
+    const plotter = await Plotter.findOne({ name: plotterName })
     if (!plotter) throw new Error('Plotter not found')
     return plotter
 }
 
 const updatePlotterStatus = async (
-    plotterId: string,
+    plotterName: string,
     status: PlotterStatus
 ) => {
-    const plotter = await getPlotterById(plotterId)
+    const plotter = await getPlotterByName(plotterName)
     plotter.status = status
     await plotter.save()
     return plotter
@@ -51,9 +51,13 @@ export const executeGCodeCommands = async (
 ) => {
     let commands = gcode
     let currentCommandIndex = 0
-
+    console.log('gcode')
     parser.on('data', () => {
         console.log(`${currentCommandIndex} / ${commands.length}`)
+        if (currentCommandIndex == commands.length) {
+            serialPort.close()
+            return
+        }
         if (currentCommandIndex < commands.length) {
             serialPort.write(`${commands[currentCommandIndex]}\n`)
             currentCommandIndex++
