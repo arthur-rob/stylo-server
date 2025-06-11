@@ -1,9 +1,8 @@
 import express from 'express'
-import { draw, list, discover } from '@/controllers/plotters/index'
+import { execute, list, discover } from '@/controllers/plotters/index'
 const router = express.Router()
 
-router.post('/draw', draw)
+router.post('/execute', execute)
 router.get('/list', list)
 router.get('/discover', discover)
-
 export default router
