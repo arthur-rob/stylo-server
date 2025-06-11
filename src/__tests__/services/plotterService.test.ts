@@ -12,7 +12,7 @@ describe('plotterService', () => {
         jest.clearAllMocks()
     })
 
-    describe('draw', () => {
+    describe('execute', () => {
         it('should execute GCode commands and update plotter status', async () => {
             const mockPlotter = {
                 _id: '123',
@@ -29,7 +29,7 @@ describe('plotterService', () => {
             ).mockImplementation(jest.fn())
 
             const gcode = ['G0 X10 Y10', 'G1 X20 Y20']
-            await plotterService.draw(gcode, '123')
+            await plotterService.execute(gcode, '123')
 
             expect(Plotter.findOne).toHaveBeenCalledWith({ name: '123' })
             expect(mockPlotter.save).toHaveBeenCalledTimes(1)
@@ -44,7 +44,7 @@ describe('plotterService', () => {
         it('should throw an error if plotter is not found', async () => {
             ;(Plotter.findOne as jest.Mock).mockResolvedValue(null)
 
-            await expect(plotterService.draw([], '123')).rejects.toThrow(
+            await expect(plotterService.execute([], '123')).rejects.toThrow(
                 'Plotter not found'
             )
         })

@@ -4,7 +4,7 @@ import Plotter from '@/models/plotterModel'
 import { PLOTTER_STATUS } from '@/constants/plotter'
 import { PlotterStatus } from '@/types/plotter'
 
-export const draw = async (gcode: string[], plotterName: string) => {
+export const execute = async (gcode: string[], plotterName: string) => {
     const plotter = await getPlotterByName(plotterName)
     const serialPort = initializeSerialPort(plotter)
     const parser = setupParser(serialPort)

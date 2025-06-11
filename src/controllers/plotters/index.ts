@@ -2,13 +2,13 @@ import { Request, Response } from 'express'
 import * as plotterService from '@/services/plotterService'
 import Plotter from '@/models/plotterModel'
 
-export const draw = async (req: Request, res: Response) => {
+export const execute = async (req: Request, res: Response) => {
     const params = req.body
     try {
         const gcode = params.gCode
         const plotterId = params.plotterId
         if (!gcode || gcode.length == 0) throw new Error('No Gcode provided')
-        await plotterService.draw(gcode, plotterId)
+        await plotterService.execute(gcode, plotterId)
         res.status(200).json({ status: 'drawing' })
     } catch (error) {
         console.error(error)
