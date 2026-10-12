@@ -122,8 +122,7 @@ const requiredString = (value: unknown, label: string) => {
 // Keep only editable fields: absent ones are left untouched
 const validatePlotterUpdate = (input: PlotterInput = {}) => {
     const data: PlotterInput = {}
-    if (input.name !== undefined)
-        data.name = requiredString(input.name, 'Name')
+    if (input.name !== undefined) data.name = requiredString(input.name, 'Name')
     if (input.path !== undefined)
         data.path = requiredString(input.path, 'Serial port')
     if (input.baudRate !== undefined) {
