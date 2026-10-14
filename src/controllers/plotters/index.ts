@@ -32,3 +32,40 @@ export const discover = async (req: Request, res: Response) => {
         res.status(500).json({ message: 'Erreur serveur' })
     }
 }
+
+export const register = async (req: Request, res: Response) => {
+    const { name, path, baudRate } = req.body ?? {}
+    try {
+        const plotter = await plotterService.register(name, path, baudRate)
+        res.status(201).json(plotter)
+    } catch (error: any) {
+        const status = error.message === 'Plotter already exists' ? 409 : 400
+        res.status(status).json({ message: error.message })
+    }
+}
+
+const handleError = (res: Response, error: unknown) => {
+    if (error instanceof plotterService.PlotterError) {
+        res.status(error.status).json({ message: error.message })
+        return
+    }
+    console.error(error)
+    res.status(500).json({ message: 'Erreur serveur' })
+}
+
+export const update = async (req: Request, res: Response) => {
+    try {
+        res.json(await plotterService.update(req.params.id, req.body))
+    } catch (error) {
+        handleError(res, error)
+    }
+}
+
+export const remove = async (req: Request, res: Response) => {
+    try {
+        await plotterService.remove(req.params.id)
+        res.status(204).end()
+    } catch (error) {
+        handleError(res, error)
+    }
+}
