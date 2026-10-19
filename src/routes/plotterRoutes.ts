@@ -1,6 +1,8 @@
 import express from 'express'
 import {
     execute,
+    stop,
+    job,
     list,
     discover,
     register,
@@ -10,6 +12,8 @@ import {
 const router = express.Router()
 
 router.post('/execute', execute)
+router.post('/stop', stop)
+router.get('/job', job)
 router.get('/list', list)
 router.get('/discover', discover)
 router.post('/register', register)

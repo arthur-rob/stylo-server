@@ -5,16 +5,68 @@ import Plotter from '@/models/plotterModel'
 import { PLOTTER_STATUS } from '@/constants/plotter'
 import { Plotter as PlotterType, PlotterStatus } from '@/types/plotter'
 
-export const execute = async (gcode: string[], plotterName: string) => {
-    const plotter = await getPlotterByName(plotterName)
-    const serialPort = initializeSerialPort(plotter)
-    const parser = setupParser(serialPort)
-
-    await updatePlotterStatus(plotterName, PLOTTER_STATUS.BUSY)
-    await executeGCodeCommands(gcode, serialPort, parser)
-
-    return plotter
+// Plots being streamed, by plotter name: one serial connection per plotter
+interface Job {
+    commands: string[]
+    sent: number
+    total: number
+    stopping: boolean
+    // commands of the drawing sent before it was stopped
+    sentBeforeStop: number
+    finish: (status: PlotterStatus) => void
 }
+const jobs = new Map<string, Job>()
+// plotters whose serial port is being opened, not streaming yet
+const starting = new Set<string>()
+
+export const getJob = (plotterName: string) => {
+    const job = jobs.get(plotterName)
+    return job
+        ? {
+              running: true,
+              stopping: job.stopping,
+              sent: job.stopping
+                  ? job.sentBeforeStop
+                  : Math.min(job.sent, job.total),
+              total: job.total,
+          }
+        : { running: false, stopping: false, sent: 0, total: 0 }
+}
+
+export const execute = async (gcode: string[], plotterName: string) => {
+    if (jobs.has(plotterName) || starting.has(plotterName))
+        throw new PlotterError('The plotter is already plotting', 409)
+    starting.add(plotterName)
+    try {
+        const plotter = await getPlotterByName(plotterName)
+        const serialPort = await openSerialPort(plotter)
+        const parser = setupParser(serialPort)
+
+        await updatePlotterStatus(plotterName, PLOTTER_STATUS.BUSY)
+        await executeGCodeCommands(gcode, serialPort, parser, plotterName)
+
+        return plotter
+    } finally {
+        starting.delete(plotterName)
+    }
+}
+
+// Stop streaming the current plot, then send finalCommands (e.g. lift the pen)
+export const stop = (plotterName: string, finalCommands: string[] = []) => {
+    const job = jobs.get(plotterName)
+    if (!job) return { stopped: false }
+    if (!job.stopping) {
+        job.stopping = true
+        job.sentBeforeStop = job.sent
+        job.commands = finalCommands
+        job.sent = 0
+        // the firmware may never answer again: don't keep the port forever
+        setTimeout(() => job.finish(PLOTTER_STATUS.IDLE), STOP_TIMEOUT).unref()
+    }
+    return { stopped: true }
+}
+
+const STOP_TIMEOUT = 10000
 
 const getPlotterByName = async (plotterName: string) => {
     const plotter = await Plotter.findOne({ name: plotterName })
@@ -32,12 +84,24 @@ const updatePlotterStatus = async (
     return plotter
 }
 
-const initializeSerialPort = (plotter: any) => {
-    return new SerialPort(
-        { path: plotter.path, baudRate: plotter.baudRate },
-        (err: any) => {
-            if (err) console.log('Error: ', err.message)
-        }
+// Open the port before streaming so a wrong path or a busy port is reported
+const openSerialPort = (plotter: any): Promise<SerialPort> => {
+    const serialPort = new SerialPort({
+        path: plotter.path,
+        baudRate: plotter.baudRate,
+        autoOpen: false,
+    })
+    return new Promise((resolve, reject) =>
+        serialPort.open((err) =>
+            err
+                ? reject(
+                      new PlotterError(
+                          `Could not open ${plotter.path}: ${err.message}`,
+                          503
+                      )
+                  )
+                : resolve(serialPort)
+        )
     )
 }
 
@@ -48,35 +112,53 @@ const setupParser = (serialPort: SerialPort) => {
 export const executeGCodeCommands = async (
     gcode: string[],
     serialPort: SerialPort,
-    parser: ReadlineParser
+    parser: ReadlineParser,
+    plotterName: string
 ) => {
-    let commands = gcode
-    let currentCommandIndex = 0
-    console.log('gcode')
-    parser.on('data', () => {
-        console.log(`${currentCommandIndex} / ${commands.length}`)
-        if (currentCommandIndex == commands.length) {
-            serialPort.close()
+    let finished = false
+    const job: Job = {
+        commands: gcode,
+        sent: 0,
+        total: gcode.length,
+        stopping: false,
+        sentBeforeStop: 0,
+        finish: (status) => {
+            if (finished) return
+            finished = true
+            jobs.delete(plotterName)
+            try {
+                if (serialPort.isOpen) serialPort.close()
+            } catch (error: any) {
+                console.error('Error closing port: ', error.message)
+            }
+            updatePlotterStatus(plotterName, status).catch((error) =>
+                console.error('Could not update plotter status', error)
+            )
+        },
+    }
+    jobs.set(plotterName, job)
+
+    // the firmware answers each command: send the next one on every answer
+    const sendNext = () => {
+        if (job.sent >= job.commands.length) {
+            job.finish(PLOTTER_STATUS.IDLE)
             return
         }
-        if (currentCommandIndex < commands.length) {
-            serialPort.write(`${commands[currentCommandIndex]}\n`)
-            currentCommandIndex++
-        }
+        serialPort.write(`${job.commands[job.sent]}\n`)
+        job.sent++
+    }
+    parser.on('data', () => {
+        console.log(`${plotterName}: ${job.sent} / ${job.commands.length}`)
+        sendNext()
     })
 
     serialPort.on('error', (err: any) => {
         console.error('Serial Error: ', err.message)
-        try {
-            serialPort.close()
-        } catch (error: any) {
-            console.error('Error closing port: ', error.message)
-        }
+        job.finish(PLOTTER_STATUS.ERROR)
     })
+    serialPort.on('close', () => job.finish(PLOTTER_STATUS.IDLE))
 
-    if (commands.length > 0) {
-        serialPort.write(`${commands[currentCommandIndex]}\n`)
-    }
+    if (job.commands.length > 0) sendNext()
 }
 
 export const discover = async () => {

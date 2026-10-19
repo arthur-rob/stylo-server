@@ -11,9 +11,32 @@ export const execute = async (req: Request, res: Response) => {
         await plotterService.execute(gcode, plotterId)
         res.status(200).json({ status: 'drawing' })
     } catch (error) {
+        if (error instanceof plotterService.PlotterError) {
+            handleError(res, error)
+            return
+        }
         console.error(error)
         res.status(400).json({ status: error })
     }
+}
+
+export const stop = async (req: Request, res: Response) => {
+    const { plotterId, gCode } = req.body ?? {}
+    if (!plotterId) {
+        res.status(400).json({ message: 'No plotter provided' })
+        return
+    }
+    const finalCommands = Array.isArray(gCode) ? gCode.map(String) : []
+    res.json(plotterService.stop(plotterId, finalCommands))
+}
+
+export const job = async (req: Request, res: Response) => {
+    const plotterId = req.query.plotterId
+    if (typeof plotterId !== 'string' || !plotterId) {
+        res.status(400).json({ message: 'No plotter provided' })
+        return
+    }
+    res.json(plotterService.getJob(plotterId))
 }
 
 export const list = async (req: Request, res: Response) => {
